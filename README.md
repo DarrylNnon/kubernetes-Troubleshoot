@@ -10,4 +10,3 @@ Before jumping into to debugging, i have to understand what is the state of my p
 out of these three, where is the state of my pods? then i can proceed with the troubleshooting
 
 ![image](https://github.com/user-attachments/assets/e7d116b6-5557-4c17-8cce-0332ed1c781f)
-
