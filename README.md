@@ -283,3 +283,104 @@ So to dibugg i make sure i have the configmap created and in the configmap i hav
 Now we've seen 5 options, let see another option
 
 ## option6: Unavailable Secret
+
+the option6 is similar to configmap if i need some sensitive file like password to be injected into my container or i need some certificate file to be injected into my container then i will not use configmap.I will use another object call secret.
+
+Now exactly like configmap, for a secret also, i need to make sure that pod can reach the secret object and it will try to mount to the container only  then it goes ahead with the container creation.
+
+So if there's an error where the secret object if not found similar to this, container will not be created. So my container creattion is equivalent of running the application so for that all the necessary requirement should be available.
+
+So in this secenario we will see what to do when my secret is not available.
+
+So now let try to run our next script:
+
+```sh
+kubectl get pods --watch
+kubectl describe
+```
+![image](https://github.com/user-attachments/assets/a32cccc5-04ac-47b5-a069-9e789fc6c553)
+
+As we can see the pod is on pending status then move to containercreating wich mean that pod got assign to a machine but some reason container is not able to create so i now do a:
+
+```sh
+kubectl describe pod 
+```
+![image](https://github.com/user-attachments/assets/3a3ee0cd-a116-42e2-b976-e8b224f8766f)
+
+then i go to event:
+
+![image](https://github.com/user-attachments/assets/176e6a71-d670-483a-bb68-77479b08ece7)
+
+As i can see pod got assign to a machine and the next thing is it try to read password call "mypasswd" and it's not available because of which it's not able to set up a volume inside the pod. And that's where container creation is not success.
+
+So again to check this example i will go to my secret.yml file
+
+![image](https://github.com/user-attachments/assets/3bdbf163-e4ab-4d9c-81ff-9b6e559e609b)
+
+and here if you look at the end i can see that i have a secret ojbect call passwd which i need  and i want that to be available in my container path "tmp/config". Assuming if my container start it will read some file here.
+
+![image](https://github.com/user-attachments/assets/a5562f4b-e9a2-433e-801c-0463f16ef25b)
+
+Now let move to the next scenario
+
+## option7: Resource Quota 
+
+This is a unique issue where my pod is not created but this time is a little diferrent error.
+
+![image](https://github.com/user-attachments/assets/2a404dab-66a0-40ed-b597-646404460506)
+
+So i can first pod got assign to a machine and then container is getting created and in fact container is also created and it's running successfully. Then what's the issue we might face or where is the issue?
+
+![image](https://github.com/user-attachments/assets/791261f9-718c-4484-8e0f-64d084eb77be)
+
+That's when i to per attention cause their actually 2 replicas here and for both replicas the state is in running which means pod got assign to a machine so let me show it to you:
+
+first let do "kubectl get pods --watch" 
+
+![image](https://github.com/user-attachments/assets/543c60ff-7e98-4727-9cf1-60151d164072)
+
+we can see only two replicas and now let do "kubectl describe pod"
+
+![image](https://github.com/user-attachments/assets/ce8b3bf2-2878-442e-8b4d-0b6dedad7ac6)
+
+Pod got assign to a machine, image got downloaded and container got created and it's running.
+
+![image](https://github.com/user-attachments/assets/7687295d-426c-40c9-a169-f4eb2184f350)
+
+That's why i see the status of the pod as running, then what's the issue? so now let quickly comeback to the example
+
+![image](https://github.com/user-attachments/assets/3e00e50c-093c-4c7b-9f90-bed16c90781c)
+
+So what happen is that i have told that i want 3 replicas in my deployment object, always kubernetes has to make sure there are 3 replicas. But how many replicas do i see here?
+
+```sh
+kubectl get pods --watch
+```
+![image](https://github.com/user-attachments/assets/afd3d605-558c-428d-ab7b-76a893f6aadf)
+
+There is only two replicas, so what happen to the third replicas and there's not error in fact it's not even showing an entry of a pod that's why it might be confusing. So to understand it better now let go back and look into the basics of our kubernetes class; we understood whenever we say deployment object it create another object call replicaset and that replicaset will create the pod and this is where now if i do:
+
+```sh
+kubectl get pods --watch
+kubectl get deploy
+```
+![image](https://github.com/user-attachments/assets/0a7862bc-4ad1-4c67-a97f-26ff514fb867)
+
+it clearly say out of 3 replicaset only 2 pods are there. and equivalent to that if i do "kubectl get rs" i can see out of 3 desired only 2 are there.
+
+```sh
+kubectl get rs
+```
+![image](https://github.com/user-attachments/assets/656bf2d1-9e39-451a-aa47-c9661546c05d)
+
+And now i see why replicaset is not able to create a 3 replicas. So now i do a "kubectl describe rs"
+
+![image](https://github.com/user-attachments/assets/b095aa58-1623-4e9a-9adb-1ee6b8f2367c)
+
+And thiss where it clearly show me an error where in my namespace, i have limited or set the resourcequota.
+
+![image](https://github.com/user-attachments/assets/ea490c87-105e-4550-ab98-5723cdb23ec8)
+
+So in kubernetes ther's an object call "resourcequota" that i can apply to a namespace in which i can control how many pods our replicas should be created or running inside the namespace. So this is how when i create a deployment object for a QA for example, i have to control on how many pods is needed because QA don't need necessarily more than 2 or 3 pods so in that case when QA try to create more pods then my "resourcequota" will restrict" so exactly what we have done, in my example the shell script has already apply the resourcequota where it's going to apply and say only 2 pods is allows in my namespace.
+
+![image](https://github.com/user-attachments/assets/33955acf-ef04-4a09-880d-d09b612d589e)
