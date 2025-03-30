@@ -384,3 +384,93 @@ And thiss where it clearly show me an error where in my namespace, i have limite
 So in kubernetes ther's an object call "resourcequota" that i can apply to a namespace in which i can control how many pods our replicas should be created or running inside the namespace. So this is how when i create a deployment object for a QA for example, i have to control on how many pods is needed because QA don't need necessarily more than 2 or 3 pods so in that case when QA try to create more pods then my "resourcequota" will restrict" so exactly what we have done, in my example the shell script has already apply the resourcequota where it's going to apply and say only 2 pods is allows in my namespace.
 
 ![image](https://github.com/user-attachments/assets/33955acf-ef04-4a09-880d-d09b612d589e)
+
+Now let move to the next case scenario
+
+## option8: Image Pull Back Off
+
+like previuously i do:
+
+```sh
+kubectl get pods --watch
+```
+
+![image](https://github.com/user-attachments/assets/25d0f63b-58c0-4050-b0ee-a1471fde5033)
+
+Now this is one of the most popular issue which i might to an interview.
+So this is call "image pull back off". So what happen is that if i look at the pods status, i can see is moving from pending to containercreation then to Error image and then image pull back off. So what does it means?
+
+This kind of error accur when my pods has been assign to a machine but after assigning and the next thing it has to do is to download the image and this is where due to various reason like my image tag is not proper or they could be a credential issue or some permission issue where am not able to download. The whole scenario what will happen is that my image pulling will be failing and because my container will not go to the creation because only when the image has been downloaded then we will go to the container creation so this is something even before the container creation i will get this error.
+
+Now to understand, if i do a describe:
+
+```sh
+kubectl describe pod
+```
+![image](https://github.com/user-attachments/assets/7965a074-f2af-4c76-9c1f-4da3e6d08766)
+
+and i look at the event section
+
+![image](https://github.com/user-attachments/assets/84d6d2d2-3390-4a12-9423-d6c00999f62d)
+
+I can see the pod got assign to a machine and then am trying to download image. In this case i simply have to go back and look at image and find out whether i have gave the wrigth image or  the right tag or the repository is correct and if not...am i using some sort of credentials which is not correct. so i have to debbug it and fix it and only then my image will be able to be download properly.
+
+![image](https://github.com/user-attachments/assets/231be860-34fe-4f54-b427-fd48294310e3)
+
+
+![image](https://github.com/user-attachments/assets/bf888b01-a57c-41d0-8dea-6f592f1b2ddb)
+
+Next i m0ove into the next case scenario which is also a popular error.
+
+## option9: CrashLoopBackOff-OutofMemory
+
+This case is call "crashloopbackoffmemory". Ok, so what is crashloop? 
+It mean that for some reason, my container is getting crash and again and again is going into crash mode.
+
+So when does this happen? that's where they are a lot of scenario in which my container can go into a crash mode.
+
+![image](https://github.com/user-attachments/assets/791915e9-2cfc-4c0d-af4c-88f9953d1ee2)
+
+So to understand it, once again if i look at this capture above, i can see from the pending stat i was able to create a container but while the container is getting created and my container is running the startup command their some issue and because of it, the container started and again it failed and because of this kubernetes will ...
+
+Let go back to my basic of pods in kubernetes class:
+If there is a container inside a pod and if the container get stop or crash for some reason pod will try to recreate it.
+
+So what is happening in this sceanrio is that pod is creating a container and a container is running and container is failing because of that, pod will try to recreate it.
+
+![image](https://github.com/user-attachments/assets/3fac9da8-28eb-475d-a0f4-aaffc8456910)
+
+So to understand let do:
+
+```sh
+kubectl describe pod
+```
+
+![image](https://github.com/user-attachments/assets/a6e5ae12-afe6-4bea-9007-2074afdbde17)
+
+then i go to event:
+
+![image](https://github.com/user-attachments/assets/d8ea807c-83c0-4444-84cb-73593802bf18)
+
+Now in this example, where it clearly say that it's a "crashloop" and i do not get any output from this because it will just say that, i mean the event will just give the output where container get created but after that my container is trying to get restarted that's all.
+
+So how do i figure it out how exactly is the issue. So one of the way that i can find out is from the "message", it say crashloop but it also say "OOMKilled" (which means Out of Memory)
+
+![image](https://github.com/user-attachments/assets/08602145-378c-4412-98ef-1524405ba649)
+
+So it means that when my container is running the application, my application doesn't have enough memory while the application is running and because of that my application is getting stop and then my container is trying to be recreated and once again while it's running application again try to reach and take whatever the memory it needs from the machine and which again not available and it get into the crashloop.
+
+This is where if i now comeback and look at the yaml example:
+
+![image](https://github.com/user-attachments/assets/1de7967d-6b7c-4a3c-a230-22d7db64d2b2)
+
+What i have done purposly for the sake of demo, i have taken a container in which there's a linux command call "stress"( stress is a ligning command which is use to do some kind of testing by adding load to my container or application so what am doing now.
+
+To create this container am telling maximum of "200Mi" allow which means pod can allows 200Mi but purposly, am trying to run stress command and am trying to tell to stress command to put a load of "250Mi" and becasue of this, what is happenning is that my container is trying to use 250Mi but the moment i reach 200Mi pod will cut down the limit and because of that this container or the command failed and as soon as this container failed this will be recreated and that's where it's going into a crashloop.
+
+So to fix, first i need to talk to dev team or QA and find out how much of actual memory of resource is needed for my pod. And in case if need more memory or more resources for my container then i have to change my maximum capacity and give a little more that what is needed. So when i run my c=machine will have enought capacity and my container will use the maximum limit.
+
+![image](https://github.com/user-attachments/assets/757337f8-1ba3-4153-b12b-ca165a1d0182)
+
+
+## option10: CrashLoopBackOff-Healthcheck
