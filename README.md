@@ -474,3 +474,81 @@ So to fix, first i need to talk to dev team or QA and find out how much of actua
 
 
 ## option10: CrashLoopBackOff-Healthcheck
+
+Now let talk about another scenario. As usual i do:
+
+```sh
+kubectl get pods --watch
+```
+![image](https://github.com/user-attachments/assets/c34fc8b5-e48c-4278-a197-bd09ebc5a6a4)
+
+I can see the pod is on pending then move into containercreation then move into running status.
+
+However if i wait some time, i should see container failed and because the container failed pod will try to recreated a container. And this is continue to happen on a minimum of 3 times it will be mark as crashloop.
+
+![image](https://github.com/user-attachments/assets/0b1f34e3-81bd-43b0-a2f1-9a90f9fefbb2)
+
+I can see that my container was just a glish, there was only one output but i can see they was another output
+
+![image](https://github.com/user-attachments/assets/cb59ab71-c251-4a25-a37e-500113953552)
+
+if i wait a little bit again, it will show as running even though there's nothing.
+
+This is because in this scenario they will be a failure in "HealthCheck" so once again before i decide anything, i should run the:
+
+```sh
+kubectl describe pod
+```
+![image](https://github.com/user-attachments/assets/60b2a90e-13c5-445f-bddd-18ef1a4f78e0)
+
+And i go to event:
+![image](https://github.com/user-attachments/assets/bf57504e-4fd0-43dd-a137-4c53f2e1d598)
+
+and i can see  the pod running fine, container got created, container is started and the application is running. This is when in Kubernetes we have something call "HealthCheck" liveness prod or readiness prod".
+
+Now if i take liveness prod which is a healthcheck, so if i had given a healthcheck to my container and this healthcheck failed continuously for 3 times, then kubernetes will try to recreate the container that is when another mode in which the container is going into crashloop
+
+![image](https://github.com/user-attachments/assets/a6004670-c89a-43e0-b7a9-40f893f3246d)
+
+And if i look at this example:
+
+![image](https://github.com/user-attachments/assets/552beae0-6c58-4368-bd52-c1b87f681fe8)
+
+How do i fix this situation?
+So this is where if i try to see that my container healthcheck is failing then i need to check my yaml file in the application log to see why my app is failing for the healthcheck.
+
+And i need to talk to the dev team and find out if there is any change that happend or is there anything that i have to change. A part of that this error is clearly indicate that my app is not running properly. So base of the log of the app i need to figure out and then work with a dev team to fix it.
+
+## option11: CrashLoopBackOff-Init
+
+So this is also a crashloop where my pod is mark as loop.
+
+![image](https://github.com/user-attachments/assets/7668b3bb-534a-4a78-80da-40b12658ba18)
+
+Now look at the error, this is when if my pod has a patren( a patren is for every container, i will have one main app and a part from that i can a patren where if i need a Init. 
+
+So in this example, if i have a init container in my pod, as soon as my pod get assign to a machine, the first thing it will do is to try to create a init container and only when the init is created then the container is successfully executed it will then go to the main container.
+
+The init container itself is failing, because of which the pod is getting recreated and once again the init container is failing and my pod is mark as crashloop backoff.
+
+So now let do a kubectl describe
+
+```sh
+kubectl describe pod
+```
+![image](https://github.com/user-attachments/assets/96c06792-94d7-4fa4-bcfe-2908274387ee)
+
+and go to event to cross check:
+
+![image](https://github.com/user-attachments/assets/ce019182-2e19-4ce5-82be-2ad6b4c3e045)
+
+As i can see my pod is assign to a machine and then it try to download an image or centos for the init container and this is failing. So it's not even moving to the next container.
+
+So now to understand let check the example also.
+
+![image](https://github.com/user-attachments/assets/69132cd4-bbb3-4845-a16b-43180134999e)
+
+In this example, i took a simple pod in which there's one init container and there's one main container. I can see for the init container i have created a container from centos image and purposly. So it will try to create again and again a init container because only if the init container is created then  it goes to the main container.
+
+![image](https://github.com/user-attachments/assets/ee29a7de-b2df-4992-92c1-1b0e0c4d6796)
+
