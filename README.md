@@ -552,3 +552,116 @@ In this example, i took a simple pod in which there's one init container and the
 
 ![image](https://github.com/user-attachments/assets/ee29a7de-b2df-4992-92c1-1b0e0c4d6796)
 
+
+## option12: CrashLoopBackOff-Runtime
+
+ok, this is also a crashloop but for a different type of error. So once again, now this is where i am into the 3rd phase.
+
+```sh
+kubectl get pods --watch
+```
+
+![image](https://github.com/user-attachments/assets/1c78b912-115c-4c27-a51b-62a74654bb91)
+
+What is the 3rd phase?
+My pod has been assign to a machine, the image is downloaded, container is created, container is running but once again for some reason my application is failing. It could be a healthcheck issue. But this time is going into a crashloop
+
+![image](https://github.com/user-attachments/assets/30424cbc-4509-436f-be9a-b8b0d08532dc)
+
+For this, what is a crashloop? let do a kubectl describe
+
+```sh
+kubectl describe
+```
+![image](https://github.com/user-attachments/assets/4f5b45fd-57b3-43b9-8eac-a4599d11d2b8)
+
+Now let go to the event
+
+![image](https://github.com/user-attachments/assets/40ccffeb-9e59-4e3b-ac97-ec07db7d5dd4)
+
+My main container is getting recreated again and again. Because there's some problem. So to understand i need to check the log.
+
+![image](https://github.com/user-attachments/assets/f6f854c0-29bc-4192-add2-a65f1d095846)
+
+so i will run "kubectl logs -f"
+
+```sh
+kubectl logs -f
+```
+
+![image](https://github.com/user-attachments/assets/5d24178e-acdf-424c-b42a-6de94bbe7a7d)
+
+![image](https://github.com/user-attachments/assets/b4376d05-16b0-4625-97a5-773ad517094c)
+
+I should see that my pod is failing for a connexion, more precisely for a database connection.
+
+![image](https://github.com/user-attachments/assets/c9b45e40-211c-425c-a022-4ca0cd0a0930)
+
+This is example, am using the vesvortec our webaplication.
+
+Real question:
+If i see an error call "jdbc" for a java application or springboot application, if am refering to a database, then i reference to it using a string call "jdbc" that's java database connexion string which is the URL. Here am refering to a MySQL database that is not available and enhence in this error.
+
+![image](https://github.com/user-attachments/assets/3ff26704-614c-4ba1-9712-77f1273a03c8)
+
+So how do i fix this?
+I need to make sure wether my databse is up and running and connectable and sometime it could be too many connexion to the database. So the database will reject any new connection in those kind of situation, i need to work with respect of the databse team or system admin team or with QA team and find out why we're not able to connect to the database.
+
+![image](https://github.com/user-attachments/assets/40a1d6e0-445c-44d7-9c85-345d1fd29562)
+
+
+## option13: Runtime Error-Service 
+
+Now the last option, whcih is once again a runtime error and this is an interesting error and also something i will face very common.so let run
+
+```sh
+kubectl get pods --watch
+```
+
+![image](https://github.com/user-attachments/assets/b6418a07-5a98-4c81-98f7-35e91c8ff75b)
+
+
+So if i watch carefully, pod is getting created or assign to a machine, container image is downloaded, container is created, and my application is also running successfully because of it pod is mark as running.
+
+Now let do a describe
+
+```sh
+kubectl describe pod
+```
+![image](https://github.com/user-attachments/assets/7f589ae2-44bb-4681-ba04-5fbb2441822c)
+
+![image](https://github.com/user-attachments/assets/e057afde-be11-4065-aa04-e4a9a16a26b8)
+
+Everything look good! Now wht is the scenario?
+QA team or let say in production the users or customers they say their not able to access my application. This is a specific type of error where the problem is where the application is not accessible but by while running kubectl get pod and kubectl describe i do not see any error.
+
+And the numbers of replicas i wanted is also running. Then what could be the issue?
+So this is where i have to go back to my basic kubernetes classes.
+
+I created an object like deployment object to make sure how many replicas i need it should be running. The object that i created is running so that my pod get the ability to scale up and down.
+
+In the class i learn how to access my pod and that's where there's another object call "service" 
+
+```sh
+kubectl get svc
+```
+![image](https://github.com/user-attachments/assets/af9a9a76-1cd2-4f80-a40b-1f147ef73f7c)
+
+if i look into my example:
+
+![image](https://github.com/user-attachments/assets/74c02bce-7a8a-4235-9f76-5aaebb0e2c56)
+
+I have a deployment object with 2 replicas and it's running our apache on port 80
+and am using a service and am creating the service as clusterIP and i have map the port to the port 80 service.
+
+So pod is running fine this is where, if i want to access the pod directly i can use the Ip
+
+![image](https://github.com/user-attachments/assets/4e00bd16-beb8-4a67-8c8e-e7192c12772b)
+
+curl 172.17.0.4
+
+![image](https://github.com/user-attachments/assets/09821c02-e343-4f91-848c-df5998b19ee9)
+
+![image](https://github.com/user-attachments/assets/125f3a96-425c-4539-ace9-860ebf4e835e)
+
+Now there's a service created call Demo service and this is the clusterIP 
